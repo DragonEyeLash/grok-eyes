@@ -179,15 +179,19 @@ function drawEyeFemale(cx, cy, rx, ry, open, side) {
 }
 
 function drawEyeMale(cx, cy, rx, ry, open, side) {
-  // plain M&M: no lashes, thicker brow
+  // Blue M&M style: heavy candy lids, no lashes, confident arched brows
   ctx.save();
   ctx.strokeStyle = '#111';
   ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(3, rx * 0.14);
-  const y = cy - ry * 1.18;
+  ctx.lineWidth = Math.max(3.5, rx * 0.12);
+  const y = cy - ry * 1.35;
+  const innerX = cx - side * rx * 0.9;
+  const peakX = cx + side * rx * 0.08;
+  const outerX = cx + side * rx * 1.05;
+  // slightly skeptical / cool arch
   ctx.beginPath();
-  ctx.moveTo(cx - side * rx * 0.95, y);
-  ctx.quadraticCurveTo(cx + side * rx * 0.1, y - ry * 0.08, cx + side * rx * 1.0, y + ry * 0.1);
+  ctx.moveTo(innerX, y + ry * 0.1);
+  ctx.quadraticCurveTo(peakX, y - ry * 0.22, outerX, y + ry * 0.08);
   ctx.stroke();
   ctx.restore();
 
@@ -196,22 +200,50 @@ function drawEyeMale(cx, cy, rx, ry, open, side) {
   ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
   ctx.fillStyle = '#fff';
   ctx.fill();
-  ctx.lineWidth = Math.max(2.5, rx * 0.065);
+  ctx.lineWidth = Math.max(2, rx * 0.04);
   ctx.strokeStyle = '#111';
   ctx.stroke();
   ctx.clip();
-  const px = cx + lookX * rx * 0.38;
-  const py = cy + lookY * ry * 0.38;
-  const pr = rx * 0.42;
+
+  // pupil sits low in the visible white (half-lidded look)
+  const px = cx + (lookX * 0.5) * rx * 0.4;
+  const py = cy + (0.28 + lookY * 0.35) * ry * 0.5;
+  const pr = rx * 0.34;
   ctx.beginPath();
   ctx.arc(px, py, pr, 0, Math.PI * 2);
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = '#2a1810';
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(px - pr * 0.32, py - pr * 0.38, pr * 0.22, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
+  ctx.arc(px - pr * 0.25, py - pr * 0.3, pr * 0.16, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.fill();
   ctx.restore();
+
+  // heavy upper lid in candy color — covers ~top half like Blue
+  if (open > 0.08) {
+    const lidDrop = 0.52;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = lighten(bg, 0.06);
+    const lidY = cy - ry * open * (0.05 + lidDrop * 0.35);
+    ctx.beginPath();
+    ctx.moveTo(cx - rx, cy - ry * open);
+    ctx.lineTo(cx + rx, cy - ry * open);
+    ctx.lineTo(cx + rx, lidY);
+    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.62, cx - rx, lidY);
+    ctx.closePath();
+    ctx.fill();
+    // lid edge
+    ctx.beginPath();
+    ctx.moveTo(cx - rx * 0.95, lidY + ry * open * 0.04);
+    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.55, cx + rx * 0.95, lidY + ry * open * 0.04);
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = Math.max(2, rx * 0.04);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function frame(t) {
@@ -244,10 +276,11 @@ function frame(t) {
     drawEyeFemale(W / 2 - gap, cy, rx, ry, open, -1);
     drawEyeFemale(W / 2 + gap, cy, rx, ry, open, 1);
   } else {
-    const rx = Math.min(W * 0.17, H * 0.36);
-    const ry = rx * 1.35;
-    const gap = rx * 1.25;
-    const cy = H * 0.50;
+    // Blue-style: large ovals, closer set, heavy lids
+    const rx = Math.min(W * 0.185, H * 0.33);
+    const ry = rx * 1.18;
+    const gap = rx * 1.15;
+    const cy = H * 0.52;
     drawEyeMale(W / 2 - gap, cy, rx, ry, open, -1);
     drawEyeMale(W / 2 + gap, cy, rx, ry, open, 1);
   }
