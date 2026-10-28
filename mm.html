@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#E31C23">
 <meta name="apple-mobile-web-app-title" content="M&amp;M Eyes">
 <link rel="manifest" href="mm.webmanifest">
-<title>M&amp;M Eyes — Red (her)</title>
+<title>M&amp;M Eyes</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;background:#E31C23}
 canvas{display:block;width:100%;height:100%}
@@ -18,9 +18,9 @@ canvas{display:block;width:100%;height:100%}
 <canvas id="c"></canvas>
 <script>
 const q = new URLSearchParams(location.search);
-const COLORS = { red: '#E31C23', yellow: '#FFD100', green: '#00A651', blue: '#0057A6', orange: '#F7941D', brown: '#6B3A2A', pink: '#F4A6C7' };
+const COLORS = { red:'#E31C23', yellow:'#FFD100', green:'#00A651', blue:'#0057A6', orange:'#F7941D', brown:'#6B3A2A', pink:'#F4A6C7' };
 let bgKey = (q.get('bg') || q.get('color') || 'red').toLowerCase();
-let bg = COLORS[bgKey] || (/^[0-9a-f]{6}$/i.test(bgKey) ? '#' + bgKey : bgKey);
+let bg = COLORS[bgKey] || (/^[0-9a-f]{6}$/i.test(bgKey) ? '#'+bgKey : bgKey);
 const look = (q.get('look') || q.get('style') || 'female').toLowerCase();
 const isFemale = look !== 'male' && look !== 'plain';
 document.body.style.background = bg;
@@ -29,273 +29,235 @@ document.title = 'M&M Eyes — ' + bgKey + (isFemale ? ' (her)' : ' (him)');
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let W = 0, H = 0, dpr = Math.min(devicePixelRatio || 1, 3);
+let W=0,H=0,dpr=Math.min(devicePixelRatio||1,3);
+function resize(){W=innerWidth;H=innerHeight;canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
 
-function resize() {
-  W = innerWidth; H = innerHeight;
-  canvas.width = Math.floor(W * dpr);
-  canvas.height = Math.floor(H * dpr);
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+function lighten(hex,amt){const m=/^#?([0-9a-f]{6})$/i.exec(hex);if(!m)return hex;const n=parseInt(m[1],16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.min(255,Math.round(r+(255-r)*amt));g=Math.min(255,Math.round(g+(255-g)*amt));b=Math.min(255,Math.round(b+(255-b)*amt));return'#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}
+
+let lookX=0,lookY=0,targetX=0,targetY=0,nextLook=0;
+let blinkAt=0,nextBlink=performance.now()+1600;
+// wink: which eye (-1 left, +1 right, 0 none), progress
+let winkSide=0,winkAt=0,nextWink=performance.now()+5000;
+
+function eyeOpen(side,t){
+  // normal blink both eyes
+  let open=1;
+  const b=(t-blinkAt)/140;
+  if(b>=0&&b<2) open=Math.max(0.04,Math.abs(1-b));
+  // wink one eye
+  if(winkSide===side){
+    const w=(t-winkAt)/220;
+    if(w>=0&&w<2.4){
+      const wo=w<1?1-w:Math.min(1,(w-1)/1.4);
+      open=Math.min(open,Math.max(0.02,wo));
+    }
+  }
+  return open;
 }
-addEventListener('resize', resize);
-resize();
 
-let lookX = 0, lookY = 0, targetX = 0, targetY = 0;
-let blinkAt = 0, nextBlink = performance.now() + 1800;
-let nextLook = 0;
-
-function lighten(hex, amt) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return hex;
-  const n = parseInt(m[1], 16);
-  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  r = Math.min(255, Math.round(r + (255 - r) * amt));
-  g = Math.min(255, Math.round(g + (255 - g) * amt));
-  b = Math.min(255, Math.round(b + (255 - b) * amt));
-  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-}
-
-function drawBrowPink(cx, cy, rx, ry, side) {
-  // thin floating arched brow like Pink M&M
+function drawCandyLid(cx,cy,rx,ry,open,lidDrop){
+  if(open<0.06) return;
   ctx.save();
-  ctx.strokeStyle = '#111';
-  ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(2.5, rx * 0.07);
-  const y = cy - ry * 1.42;
-  const innerX = cx - side * rx * 0.85;
-  const peakX = cx + side * rx * 0.05;
-  const outerX = cx + side * rx * 1.05;
   ctx.beginPath();
-  ctx.moveTo(innerX, y + ry * 0.12);
-  ctx.quadraticCurveTo(peakX, y - ry * 0.18, outerX, y + ry * 0.06);
+  ctx.ellipse(cx,cy,rx,ry*open,0,0,Math.PI*2);
+  ctx.clip();
+  ctx.fillStyle=lighten(bg,0.06);
+  // lid edge sits lower as lidDrop rises (0.35 pink, 0.5 blue)
+  const edgeY=cy-ry*open*(1-lidDrop*1.15);
+  ctx.beginPath();
+  ctx.moveTo(cx-rx*1.02,cy-ry*open-2);
+  ctx.lineTo(cx+rx*1.02,cy-ry*open-2);
+  ctx.lineTo(cx+rx*1.02,edgeY);
+  // soft curved lid edge (bedroom / cool)
+  ctx.quadraticCurveTo(cx,edgeY+ry*open*0.55,cx-rx*1.02,edgeY);
+  ctx.closePath();
+  ctx.fill();
+  // lid rim line
+  ctx.beginPath();
+  ctx.moveTo(cx-rx*0.96,edgeY+ry*open*0.02);
+  ctx.quadraticCurveTo(cx,edgeY+ry*open*0.5,cx+rx*0.96,edgeY+ry*open*0.02);
+  ctx.strokeStyle='rgba(0,0,0,0.32)';
+  ctx.lineWidth=Math.max(1.8,rx*0.038);
   ctx.stroke();
   ctx.restore();
+  return edgeY;
 }
 
-function drawLashesPink(cx, cy, rx, ry, open, side) {
-  // exactly 3 thick outer-corner lashes, curling up/out
-  if (open < 0.2) return;
+/** Pink M&M: exactly 3 thick lashes from OUTER corner only, curling up and out */
+function drawPinkLashes(cx,cy,rx,ry,open,side,edgeY){
+  if(open<0.18) return;
   ctx.save();
-  ctx.strokeStyle = '#111';
-  ctx.lineCap = 'round';
-  // lid rim point near outer third of upper lid
-  const baseAng = side < 0 ? (Math.PI * 1.15) : (Math.PI * -0.15);
-  const lashes = [
-    { t: 0.00, len: 0.38, curl: 0.55 },
-    { t: 0.22, len: 0.48, curl: 0.75 },
-    { t: 0.42, len: 0.42, curl: 0.95 }
+  ctx.strokeStyle='#0a0a0a';
+  ctx.lineCap='round';
+  // outer corner of the lid edge
+  const ox=cx+side*rx*0.88;
+  const oy=edgeY+ry*open*0.28;
+  // 3 lashes: short, medium, longest — all from outer corner cluster
+  const lashes=[
+    {ang:-0.95,len:0.42,w:0.10},
+    {ang:-1.20,len:0.55,w:0.12},
+    {ang:-1.42,len:0.48,w:0.10}
   ];
-  for (const L of lashes) {
-    const ang = side < 0
-      ? Math.PI + 0.35 + L.t * 0.85
-      : -0.35 - L.t * 0.85;
-    // start on upper lid rim
-    const sx = cx + Math.cos(ang) * rx * 0.98;
-    const sy = cy + Math.sin(ang) * ry * open * 0.72; // sit on droopy lid line
-    const outDir = side < 0 ? -1 : 1;
-    const len = rx * L.len;
-    const ex = sx + outDir * len * 0.85;
-    const ey = sy - len * (0.55 + L.curl * 0.25);
-    const cpx = sx + outDir * len * 0.35;
-    const cpy = sy - len * (0.15 + L.curl * 0.35);
-    ctx.lineWidth = Math.max(3, rx * (0.09 - L.t * 0.015));
+  for(const L of lashes){
+    const ang=side<0?Math.PI+(-L.ang):L.ang; // mirror
+    // Pink lashes curve UP and OUT from outer corner
+    const len=rx*L.len;
+    const sx=ox+side*rx*0.02;
+    const sy=oy;
+    const ex=sx+side*Math.cos(Math.abs(L.ang))*len;
+    const ey=sy-Math.sin(Math.abs(L.ang))*len*1.05;
+    const cpx=sx+side*len*0.35;
+    const cpy=sy-len*0.75;
+    ctx.lineWidth=Math.max(3.5,rx*L.w);
     ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.quadraticCurveTo(cpx, cpy, ex, ey);
+    ctx.moveTo(sx,sy);
+    ctx.quadraticCurveTo(cpx,cpy,ex,ey);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawEyeFemale(cx, cy, rx, ry, open, side) {
-  drawBrowPink(cx, cy, rx, ry, side);
+function drawEyeFemale(cx,cy,rx,ry,open,side){
+  // friendly thin arched brows (slightly raised outer for soft look)
+  ctx.save();
+  ctx.strokeStyle='#111';
+  ctx.lineCap='round';
+  ctx.lineWidth=Math.max(2.2,rx*0.065);
+  const by=cy-ry*1.38;
+  ctx.beginPath();
+  ctx.moveTo(cx-side*rx*0.88,by+ry*0.14);
+  ctx.quadraticCurveTo(cx+side*rx*0.05,by-ry*0.2,cx+side*rx*1.02,by+ry*0.02);
+  ctx.stroke();
+  ctx.restore();
 
-  const lidDrop = 0.38; // top ~third covered like Pink
-  const visibleOpen = open * (1 - lidDrop * 0.85);
-
-  // white sclera (full oval), then lid covers top
+  // sclera — slightly wider oval like Pink
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
+  ctx.ellipse(cx,cy,rx,ry*open,0,0,Math.PI*2);
+  ctx.fillStyle='#fff';
   ctx.fill();
-  ctx.lineWidth = Math.max(2, rx * 0.04);
-  ctx.strokeStyle = '#111';
+  ctx.lineWidth=Math.max(1.8,rx*0.035);
+  ctx.strokeStyle='#111';
   ctx.stroke();
   ctx.clip();
 
-  // pupil — solid black, slightly toward center / down like reference
-  const px = cx + (lookX * 0.55 + side * -0.12) * rx * 0.45;
-  const py = cy + (lookY * 0.45 + 0.18) * ry * 0.45;
-  const pr = rx * 0.36;
-  ctx.beginPath();
-  ctx.arc(px, py, pr, 0, Math.PI * 2);
-  ctx.fillStyle = '#111';
-  ctx.fill();
-  // tiny soft highlight
-  ctx.beginPath();
-  ctx.arc(px - pr * 0.28, py - pr * 0.32, pr * 0.18, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.fill();
+  // pupil — soft friendly gaze, a bit toward center and slightly down
+  const px=cx+(lookX*0.5+side*-0.08)*rx*0.42;
+  const py=cy+(lookY*0.4+0.12)*ry*0.42;
+  const pr=rx*0.34;
+  ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+  ctx.beginPath();ctx.arc(px-pr*0.3,py-pr*0.35,pr*0.2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+  ctx.beginPath();ctx.arc(px+pr*0.25,py+pr*0.2,pr*0.08,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fill();
   ctx.restore();
 
-  // heavy upper lid in candy color (covers top of eye)
-  if (open > 0.08) {
+  // bedroom lid ~top third (Pink)
+  const edgeY=drawCandyLid(cx,cy,rx,ry,open,0.36);
+  // lash line on lid
+  if(open>0.1&&edgeY!=null){
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
-    ctx.clip();
-    const lidColor = lighten(bg, 0.08);
-    ctx.fillStyle = lidColor;
-    ctx.beginPath();
-    // lid is a chord across the top of the eye
-    const lidY = cy - ry * open * (0.15 + lidDrop * 0.55);
-    ctx.moveTo(cx - rx, cy - ry * open);
-    ctx.lineTo(cx + rx, cy - ry * open);
-    ctx.lineTo(cx + rx, lidY);
-    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.55, cx - rx, lidY);
-    ctx.closePath();
-    ctx.fill();
-    // lid crease line
-    ctx.beginPath();
-    ctx.moveTo(cx - rx * 0.92, lidY + ry * open * 0.02);
-    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.42, cx + rx * 0.92, lidY + ry * open * 0.02);
-    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
-    ctx.lineWidth = Math.max(1.5, rx * 0.035);
-    ctx.stroke();
-    // soft lash line on lid edge
-    ctx.beginPath();
-    ctx.moveTo(cx - rx * 0.95, lidY + ry * open * 0.05);
-    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.48, cx + rx * 0.95, lidY + ry * open * 0.05);
-    ctx.strokeStyle = '#111';
-    ctx.lineWidth = Math.max(2, rx * 0.045);
+    ctx.moveTo(cx-rx*0.9,edgeY+ry*open*0.06);
+    ctx.quadraticCurveTo(cx,edgeY+ry*open*0.48,cx+rx*0.9,edgeY+ry*open*0.06);
+    ctx.strokeStyle='#111';
+    ctx.lineWidth=Math.max(2.2,rx*0.05);
     ctx.stroke();
     ctx.restore();
+    drawPinkLashes(cx,cy,rx,ry,open,side,edgeY);
   }
-
-  drawLashesPink(cx, cy, rx, ry, open, side);
 }
 
-function drawEyeMale(cx, cy, rx, ry, open, side) {
-  // Blue M&M style: heavy candy lids, no lashes, confident arched brows
+function drawEyeMale(cx,cy,rx,ry,open,side){
+  // Blue M&M: thicker, more angular cool brows
   ctx.save();
-  ctx.strokeStyle = '#111';
-  ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(3.5, rx * 0.12);
-  const y = cy - ry * 1.35;
-  const innerX = cx - side * rx * 0.9;
-  const peakX = cx + side * rx * 0.08;
-  const outerX = cx + side * rx * 1.05;
-  // slightly skeptical / cool arch
+  ctx.strokeStyle='#111';
+  ctx.lineCap='round';
+  ctx.lineWidth=Math.max(3.8,rx*0.13);
+  const by=cy-ry*1.32;
+  // inner lower, peak, outer slightly down — skeptical/cool
   ctx.beginPath();
-  ctx.moveTo(innerX, y + ry * 0.1);
-  ctx.quadraticCurveTo(peakX, y - ry * 0.22, outerX, y + ry * 0.08);
+  ctx.moveTo(cx-side*rx*0.92,by+ry*0.16);
+  ctx.quadraticCurveTo(cx-side*rx*0.15,by-ry*0.18,cx+side*rx*0.55,by-ry*0.12);
+  ctx.quadraticCurveTo(cx+side*rx*0.9,by-ry*0.02,cx+side*rx*1.05,by+ry*0.12);
   ctx.stroke();
   ctx.restore();
 
+  // sclera — rounder tall oval, closer-set handled by gap
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
+  ctx.ellipse(cx,cy,rx,ry*open,0,0,Math.PI*2);
+  ctx.fillStyle='#fff';
   ctx.fill();
-  ctx.lineWidth = Math.max(2, rx * 0.04);
-  ctx.strokeStyle = '#111';
+  ctx.lineWidth=Math.max(1.8,rx*0.035);
+  ctx.strokeStyle='#111';
   ctx.stroke();
   ctx.clip();
 
-  // pupil sits low in the visible white (half-lidded look)
-  const px = cx + (lookX * 0.5) * rx * 0.4;
-  const py = cy + (0.28 + lookY * 0.35) * ry * 0.5;
-  const pr = rx * 0.34;
-  ctx.beginPath();
-  ctx.arc(px, py, pr, 0, Math.PI * 2);
-  ctx.fillStyle = '#2a1810';
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(px - pr * 0.25, py - pr * 0.3, pr * 0.16, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fill();
+  // dark brown pupil sitting LOW under the heavy lid
+  const px=cx+lookX*rx*0.28;
+  const py=cy+(0.32+lookY*0.25)*ry*open*0.9;
+  const pr=rx*0.33;
+  ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fillStyle='#2a1810';ctx.fill();
+  ctx.beginPath();ctx.arc(px-pr*0.22,py-pr*0.28,pr*0.14,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fill();
   ctx.restore();
 
-  // heavy upper lid in candy color — covers ~top half like Blue
-  if (open > 0.08) {
-    const lidDrop = 0.52;
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.fillStyle = lighten(bg, 0.06);
-    const lidY = cy - ry * open * (0.05 + lidDrop * 0.35);
-    ctx.beginPath();
-    ctx.moveTo(cx - rx, cy - ry * open);
-    ctx.lineTo(cx + rx, cy - ry * open);
-    ctx.lineTo(cx + rx, lidY);
-    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.62, cx - rx, lidY);
-    ctx.closePath();
-    ctx.fill();
-    // lid edge
-    ctx.beginPath();
-    ctx.moveTo(cx - rx * 0.95, lidY + ry * open * 0.04);
-    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.55, cx + rx * 0.95, lidY + ry * open * 0.04);
-    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-    ctx.lineWidth = Math.max(2, rx * 0.04);
-    ctx.stroke();
-    ctx.restore();
-  }
+  // Blue: heavy lid ~half the eye, no lashes
+  drawCandyLid(cx,cy,rx,ry,open,0.52);
 }
 
-function frame(t) {
-  if (t > nextLook) {
-    targetX = Math.random() * 1.4 - 0.7;
-    targetY = Math.random() * 0.8 - 0.25;
-    if (Math.random() < 0.35) { targetX = 0; targetY = 0.15; }
-    nextLook = t + 900 + Math.random() * 2400;
+function frame(t){
+  if(t>nextLook){
+    if(isFemale){
+      // softer friendly glances
+      targetX=(Math.random()*1.2-0.6);
+      targetY=Math.random()*0.5-0.05;
+      if(Math.random()<0.4){targetX=0;targetY=0.1}
+    }else{
+      targetX=Math.random()*1.0-0.5;
+      targetY=Math.random()*0.4+0.05;
+      if(Math.random()<0.4){targetX=0;targetY=0.2}
+    }
+    nextLook=t+900+Math.random()*2200;
   }
-  lookX += (targetX - lookX) * 0.1;
-  lookY += (targetY - lookY) * 0.1;
+  lookX+=(targetX-lookX)*0.1;
+  lookY+=(targetY-lookY)*0.1;
 
-  if (t > nextBlink) {
-    blinkAt = t;
-    nextBlink = t + 2400 + Math.random() * 3400;
-  }
-  let open = 1;
-  const b = (t - blinkAt) / 150;
-  if (b >= 0 && b < 2) open = Math.max(0.05, Math.abs(1 - b));
-
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  if (isFemale) {
-    // Pink-style: large, slightly wide-set ovals
-    const rx = Math.min(W * 0.19, H * 0.32);
-    const ry = rx * 1.15;
-    const gap = rx * 1.28;
-    const cy = H * 0.52;
-    drawEyeFemale(W / 2 - gap, cy, rx, ry, open, -1);
-    drawEyeFemale(W / 2 + gap, cy, rx, ry, open, 1);
-  } else {
-    // Blue-style: large ovals, closer set, heavy lids
-    const rx = Math.min(W * 0.185, H * 0.33);
-    const ry = rx * 1.18;
-    const gap = rx * 1.15;
-    const cy = H * 0.52;
-    drawEyeMale(W / 2 - gap, cy, rx, ry, open, -1);
-    drawEyeMale(W / 2 + gap, cy, rx, ry, open, 1);
+  if(t>nextBlink){blinkAt=t;nextBlink=t+2200+Math.random()*3200}
+  if(isFemale&&t>nextWink){
+    winkSide=Math.random()<0.5?-1:1;
+    winkAt=t;
+    nextWink=t+6000+Math.random()*8000;
   }
 
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+  if(isFemale){
+    const rx=Math.min(W*0.195,H*0.31);
+    const ry=rx*1.12;
+    const gap=rx*1.3;
+    const cy=H*0.52;
+    const oL=eyeOpen(-1,t),oR=eyeOpen(1,t);
+    drawEyeFemale(W/2-gap,cy,rx,ry,oL,-1);
+    drawEyeFemale(W/2+gap,cy,rx,ry,oR,1);
+  }else{
+    // Blue: closer together, slightly taller ovals
+    const rx=Math.min(W*0.18,H*0.32);
+    const ry=rx*1.2;
+    const gap=rx*1.08;
+    const cy=H*0.52;
+    const o=eyeOpen(0,t); // both same (no wink for male)
+    // force shared blink only
+    let open=1;const b=(t-blinkAt)/140;if(b>=0&&b<2)open=Math.max(0.04,Math.abs(1-b));
+    drawEyeMale(W/2-gap,cy,rx,ry,open,-1);
+    drawEyeMale(W/2+gap,cy,rx,ry,open,1);
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
-function goFullscreen() {
-  const el = document.documentElement;
-  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  if (req) req.call(el);
-}
-document.addEventListener('click', goFullscreen);
-document.addEventListener('touchend', goFullscreen, { passive: true });
+function goFullscreen(){const el=document.documentElement;const req=el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen;if(req)req.call(el)}
+document.addEventListener('click',goFullscreen);
+document.addEventListener('touchend',goFullscreen,{passive:true});
 </script>
 </body>
 </html>
