@@ -1,24 +1,187 @@
-<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes"><title>M&M Eyes</title>
-<style>html,body{margin:0;height:100%;overflow:hidden;touch-action:none}canvas{display:block}</style></head>
-<body><canvas id="c"></canvas><script>
-const q=new URLSearchParams(location.search),C={red:'#E31C23',yellow:'#FFD100'};
-let bg=q.get('bg')||q.get('color')||'red';bg=C[bg]||(/^[0-9a-f]{6}$/i.test(bg)?'#'+bg:bg);
-document.body.style.background=bg;
-const c=document.getElementById('c'),x=c.getContext('2d');let W,H,d=devicePixelRatio||1;
-function rs(){W=innerWidth;H=innerHeight;c.width=W*d;c.height=H*d;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(d,0,0,d,0,0)}
-addEventListener('resize',rs);rs();
-let lx=0,ly=0,tx=0,ty=0,blink=0,nb=performance.now()+2000,nl=0;
-function eye(cx,cy,rx,ry,open){x.save();x.beginPath();x.ellipse(cx,cy,rx,ry*open,0,0,7);x.fillStyle='#fff';x.fill();
-x.lineWidth=rx*.07;x.strokeStyle='#111';x.stroke();x.clip();
-x.beginPath();x.arc(cx+lx*rx*.4,cy+ly*ry*.4,rx*.42,0,7);x.fillStyle='#111';x.fill();
-x.beginPath();x.arc(cx+lx*rx*.4-rx*.14,cy+ly*ry*.4-rx*.16,rx*.12,0,7);x.fillStyle='#fff';x.fill();x.restore()}
-function f(t){if(t>nl){tx=Math.random()*2-1;ty=Math.random()*1.4-.7;if(Math.random()<.35){tx=0;ty=0}nl=t+900+Math.random()*2200}
-lx+=(tx-lx)*.12;ly+=(ty-ly)*.12;
-if(t>nb){blink=t;nb=t+2500+Math.random()*3500}let o=1,b=(t-blink)/180;if(b<2)o=Math.max(.05,Math.abs(1-b));
-x.fillStyle=bg;x.fillRect(0,0,W,H);const rx=Math.min(W*.17,H*.36),ry=rx*1.35;
-eye(W/2-rx*1.25,H/2,rx,ry,o);eye(W/2+rx*1.25,H/2,rx,ry,o);requestAnimationFrame(f)}
-requestAnimationFrame(f);
-document.addEventListener('click',()=>{const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||(()=>{})).call(e)});
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#E31C23">
+<title>M&amp;M Eyes — Red (her)</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;background:#E31C23}
+canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const q = new URLSearchParams(location.search);
+const COLORS = { red: '#E31C23', yellow: '#FFD100', green: '#00A651', blue: '#0057A6', orange: '#F7941D', brown: '#6B3A2A' };
+let bgKey = (q.get('bg') || q.get('color') || 'red').toLowerCase();
+let bg = COLORS[bgKey] || (/^[0-9a-f]{6}$/i.test(bgKey) ? '#' + bgKey : bgKey);
+document.body.style.background = bg;
+document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
+
+const look = (q.get('look') || q.get('style') || 'female').toLowerCase();
+const isFemale = look !== 'male' && look !== 'plain';
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, dpr = Math.min(devicePixelRatio || 1, 3);
+
+function resize() {
+  W = innerWidth; H = innerHeight;
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resize);
+resize();
+
+let lookX = 0, lookY = 0, targetX = 0, targetY = 0;
+let blinkAt = 0, nextBlink = performance.now() + 1800;
+let nextLook = 0;
+
+function drawLash(cx, cy, rx, ry, open, side) {
+  if (!isFemale || open < 0.25) return;
+  ctx.save();
+  ctx.strokeStyle = '#111';
+  ctx.lineCap = 'round';
+  const n = 7;
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const ang = Math.PI + 0.18 + t * (Math.PI - 0.36);
+    const ex = cx + Math.cos(ang) * rx * 0.98;
+    const ey = cy + Math.sin(ang) * ry * open * 0.98;
+    const flare = (side < 0 ? -1 : 1) * (0.35 + t * 0.55);
+    const out = rx * (0.22 + 0.18 * Math.sin(t * Math.PI));
+    const lx = ex + Math.cos(ang - flare) * out;
+    const ly = ey + Math.sin(ang - flare) * out * 1.15;
+    ctx.lineWidth = Math.max(2, rx * (0.045 + 0.02 * (1 - Math.abs(t - 0.5) * 2)));
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.quadraticCurveTo(
+      ex + Math.cos(ang - flare * 0.5) * out * 0.55,
+      ey + Math.sin(ang - flare * 0.5) * out * 0.7 - rx * 0.06,
+      lx, ly - rx * 0.02
+    );
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBrow(cx, cy, rx, ry, side) {
+  ctx.save();
+  ctx.strokeStyle = '#111';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const y = cy - ry * (isFemale ? 1.28 : 1.18);
+  const lift = isFemale ? ry * 0.22 : ry * 0.08;
+  const innerX = cx - side * rx * 0.95;
+  const outerX = cx + side * rx * 1.05;
+  const midX = cx + side * rx * 0.15;
+  ctx.lineWidth = Math.max(3, rx * (isFemale ? 0.11 : 0.14));
+  ctx.beginPath();
+  ctx.moveTo(innerX, y + (isFemale ? ry * 0.08 : 0));
+  ctx.quadraticCurveTo(midX, y - lift, outerX, y + ry * (isFemale ? 0.05 : 0.12));
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawEye(cx, cy, rx, ry, open, side) {
+  drawBrow(cx, cy, rx, ry, side);
+
+  // white + outline
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.lineWidth = Math.max(2.5, rx * 0.065);
+  ctx.strokeStyle = '#111';
+  ctx.stroke();
+  ctx.clip();
+
+  // pupil
+  const px = cx + lookX * rx * 0.38;
+  const py = cy + lookY * ry * 0.38;
+  const pr = rx * (isFemale ? 0.40 : 0.42);
+  ctx.beginPath();
+  ctx.arc(px, py, pr, 0, Math.PI * 2);
+  ctx.fillStyle = '#111';
+  ctx.fill();
+
+  // highlight
+  ctx.beginPath();
+  ctx.arc(px - pr * 0.32, py - pr * 0.38, pr * 0.28, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  if (isFemale) {
+    ctx.beginPath();
+    ctx.arc(px + pr * 0.28, py + pr * 0.22, pr * 0.10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // upper lid shadow for feminine lid crease
+  if (isFemale && open > 0.4) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - ry * open * 0.55, rx * 0.95, ry * open * 0.35, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawLash(cx, cy, rx, ry, open, side);
+}
+
+function frame(t) {
+  if (t > nextLook) {
+    targetX = Math.random() * 2 - 1;
+    targetY = Math.random() * 1.2 - 0.55;
+    if (Math.random() < 0.32) { targetX = 0; targetY = 0; }
+    nextLook = t + 800 + Math.random() * 2200;
+  }
+  lookX += (targetX - lookX) * 0.12;
+  lookY += (targetY - lookY) * 0.12;
+
+  if (t > nextBlink) {
+    blinkAt = t;
+    nextBlink = t + 2200 + Math.random() * 3200;
+  }
+  let open = 1;
+  const b = (t - blinkAt) / 160;
+  if (b >= 0 && b < 2) open = Math.max(0.06, Math.abs(1 - b));
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // slightly larger, wider female eyes; leave room for lashes
+  const rx = Math.min(W * (isFemale ? 0.175 : 0.17), H * (isFemale ? 0.34 : 0.36));
+  const ry = rx * (isFemale ? 1.22 : 1.35);
+  const gap = rx * (isFemale ? 1.35 : 1.25);
+  const cy = H * 0.50;
+
+  drawEye(W / 2 - gap, cy, rx, ry, open, -1);
+  drawEye(W / 2 + gap, cy, rx, ry, open, 1);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+function goFullscreen() {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (req) req.call(el);
+}
+document.addEventListener('click', goFullscreen);
+document.addEventListener('touchend', goFullscreen, { passive: true });
+</script>
+</body>
+</html>
