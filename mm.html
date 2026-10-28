@@ -6,6 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#E31C23">
+<meta name="apple-mobile-web-app-title" content="M&amp;M Eyes">
+<link rel="manifest" href="mm.webmanifest">
 <title>M&amp;M Eyes — Red (her)</title>
 <style>
 html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;background:#E31C23}
@@ -19,11 +21,11 @@ const q = new URLSearchParams(location.search);
 const COLORS = { red: '#E31C23', yellow: '#FFD100', green: '#00A651', blue: '#0057A6', orange: '#F7941D', brown: '#6B3A2A' };
 let bgKey = (q.get('bg') || q.get('color') || 'red').toLowerCase();
 let bg = COLORS[bgKey] || (/^[0-9a-f]{6}$/i.test(bgKey) ? '#' + bgKey : bgKey);
-document.body.style.background = bg;
-document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
-
 const look = (q.get('look') || q.get('style') || 'female').toLowerCase();
 const isFemale = look !== 'male' && look !== 'plain';
+document.body.style.background = bg;
+document.querySelector('meta[name="theme-color"]').setAttribute('content', bg);
+document.title = 'M&M Eyes — ' + bgKey + (isFemale ? ' (her)' : ' (him)');
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');

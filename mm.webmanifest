@@ -1,0 +1,11 @@
+{
+  "name": "M&M Eyes",
+  "short_name": "M&M Eyes",
+  "start_url": "./mm.html",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#E31C23",
+  "theme_color": "#E31C23",
+  "icons": []
+}
