@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><title>M&M Eyes</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;touch-action:none}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas><script>
+const q=new URLSearchParams(location.search),C={red:'#E31C23',yellow:'#FFD100'};
+let bg=q.get('bg')||q.get('color')||'red';bg=C[bg]||(/^[0-9a-f]{6}$/i.test(bg)?'#'+bg:bg);
+document.body.style.background=bg;
+const c=document.getElementById('c'),x=c.getContext('2d');let W,H,d=devicePixelRatio||1;
+function rs(){W=innerWidth;H=innerHeight;c.width=W*d;c.height=H*d;c.style.width=W+'px';c.style.height=H+'px';x.setTransform(d,0,0,d,0,0)}
+addEventListener('resize',rs);rs();
+let lx=0,ly=0,tx=0,ty=0,blink=0,nb=performance.now()+2000,nl=0;
+function eye(cx,cy,rx,ry,open){x.save();x.beginPath();x.ellipse(cx,cy,rx,ry*open,0,0,7);x.fillStyle='#fff';x.fill();
+x.lineWidth=rx*.07;x.strokeStyle='#111';x.stroke();x.clip();
+x.beginPath();x.arc(cx+lx*rx*.4,cy+ly*ry*.4,rx*.42,0,7);x.fillStyle='#111';x.fill();
+x.beginPath();x.arc(cx+lx*rx*.4-rx*.14,cy+ly*ry*.4-rx*.16,rx*.12,0,7);x.fillStyle='#fff';x.fill();x.restore()}
+function f(t){if(t>nl){tx=Math.random()*2-1;ty=Math.random()*1.4-.7;if(Math.random()<.35){tx=0;ty=0}nl=t+900+Math.random()*2200}
+lx+=(tx-lx)*.12;ly+=(ty-ly)*.12;
+if(t>nb){blink=t;nb=t+2500+Math.random()*3500}let o=1,b=(t-blink)/180;if(b<2)o=Math.max(.05,Math.abs(1-b));
+x.fillStyle=bg;x.fillRect(0,0,W,H);const rx=Math.min(W*.17,H*.36),ry=rx*1.35;
+eye(W/2-rx*1.25,H/2,rx,ry,o);eye(W/2+rx*1.25,H/2,rx,ry,o);requestAnimationFrame(f)}
+requestAnimationFrame(f);
+document.addEventListener('click',()=>{const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||(()=>{})).call(e)});
+</script></body></html>
