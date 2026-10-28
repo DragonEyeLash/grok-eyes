@@ -84,40 +84,47 @@ function drawCandyLid(cx,cy,rx,ry,open,lidDrop){
   return edgeY;
 }
 
-/** Pink M&M: thick continuous upper lash + 3 distinct outer swoops */
+/** Pink M&M: thick continuous upper lid + 4 outer upward curls (no brows) */
 function drawPinkLashes(cx,cy,rx,ry,open,side,edgeY){
-  if(open<0.15) return;
+  if(open<0.12) return;
   ctx.save();
   ctx.strokeStyle='#0a0a0a';
+  ctx.fillStyle='#0a0a0a';
   ctx.lineCap='round';
   ctx.lineJoin='round';
 
-  // Thick continuous base line across full lid
-  const y0 = edgeY + ry*open*0.05;
-  ctx.lineWidth = Math.max(5.5, rx*0.13);
+  // Thick continuous mascara line across the upper lid (follows lid curve)
+  const y0 = edgeY + ry*open*0.04;
+  ctx.lineWidth = Math.max(4.5, rx*0.11);
   ctx.beginPath();
-  const innerX = cx - side*rx*0.94;
-  const outerX = cx + side*rx*0.92;
-  ctx.moveTo(innerX, y0 + ry*open*0.02);
-  ctx.quadraticCurveTo(cx, edgeY + ry*open*0.52, outerX, y0 + ry*open*0.06);
+  const innerX = cx - side*rx*0.96;
+  const outerX = cx + side*rx*0.90;
+  ctx.moveTo(innerX, y0 + ry*open*0.04);
+  ctx.quadraticCurveTo(cx, edgeY + ry*open*0.48, outerX, y0 + ry*open*0.02);
   ctx.stroke();
 
-  // Three distinct thicker outer swoops (friendly/flirty like Pink)
-  const ox = outerX;
-  const oy = y0 + ry*open*0.06;
-  const swoops = [
-    { out: 0.26, lift: 0.36, w: 0.10 },
-    { out: 0.38, lift: 0.50, w: 0.12 },
-    { out: 0.32, lift: 0.42, w: 0.10 }
+  // Four distinct outer lashes curling up/out like Pink reference
+  // Roots sit along outer half of lid; tip curves outward and up
+  const lashes = [
+    { along: 0.55, out: 0.18, lift: 0.28, bend: 0.55, w: 0.055 },
+    { along: 0.72, out: 0.28, lift: 0.40, bend: 0.58, w: 0.065 },
+    { along: 0.86, out: 0.36, lift: 0.52, bend: 0.62, w: 0.075 },
+    { along: 0.98, out: 0.42, lift: 0.58, bend: 0.65, w: 0.080 }
   ];
-  for (const S of swoops) {
-    const sx = ox - side*rx*0.01;
-    const sy = oy;
-    const ex = ox + side*rx*S.out;
-    const ey = oy - ry*S.lift;
-    const cpx = ox + side*rx*(S.out*0.45);
-    const cpy = oy - ry*(S.lift*0.55);
-    ctx.lineWidth = Math.max(4, rx*S.w);
+  for (const L of lashes) {
+    // root position along lid from center toward outer corner
+    const tAlong = L.along;
+    const rxRoot = cx + side * rx * (tAlong * 0.9);
+    // sample lid curve roughly
+    const ryRoot = y0 + ry*open*(0.02 + (1-tAlong)*0.08);
+    const sx = rxRoot;
+    const sy = ryRoot;
+    const ex = sx + side * rx * L.out;
+    const ey = sy - ry * L.lift;
+    // control point pulls tip into a soft upward curl
+    const cpx = sx + side * rx * (L.out * L.bend);
+    const cpy = sy - ry * (L.lift * 0.35);
+    ctx.lineWidth = Math.max(2.8, rx * L.w);
     ctx.beginPath();
     ctx.moveTo(sx, sy);
     ctx.quadraticCurveTo(cpx, cpy, ex, ey);
@@ -127,17 +134,7 @@ function drawPinkLashes(cx,cy,rx,ry,open,side,edgeY){
 }
 
 function drawEyeFemale(cx,cy,rx,ry,open,side){
-  // friendly thin arched brows (slightly raised outer for soft look)
-  ctx.save();
-  ctx.strokeStyle='#111';
-  ctx.lineCap='round';
-  ctx.lineWidth=Math.max(2.4,rx*0.07);
-  const by=cy-ry*1.40;
-  ctx.beginPath();
-  ctx.moveTo(cx-side*rx*0.86,by+ry*0.12);
-  ctx.quadraticCurveTo(cx+side*rx*0.08,by-ry*0.22,cx+side*rx*1.0,by+ry*0.04);
-  ctx.stroke();
-  ctx.restore();
+  // no brows (Pink reference lashes only)
 
   // sclera — slightly wider oval like Pink
   ctx.save();
@@ -164,7 +161,7 @@ function drawEyeFemale(cx,cy,rx,ry,open,side){
   // bedroom lid ~top third (Pink)
   const edgeY=drawCandyLid(cx,cy,rx,ry,open,0.36);
   if(open>0.1&&edgeY!=null){
-    // fabric lashes on costume — no drawn lashes
+    drawPinkLashes(cx,cy,rx,ry,open,side,edgeY);
   }
 }
 
