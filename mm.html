@@ -18,7 +18,7 @@ canvas{display:block;width:100%;height:100%}
 <canvas id="c"></canvas>
 <script>
 const q = new URLSearchParams(location.search);
-const COLORS = { red: '#E31C23', yellow: '#FFD100', green: '#00A651', blue: '#0057A6', orange: '#F7941D', brown: '#6B3A2A' };
+const COLORS = { red: '#E31C23', yellow: '#FFD100', green: '#00A651', blue: '#0057A6', orange: '#F7941D', brown: '#6B3A2A', pink: '#F4A6C7' };
 let bgKey = (q.get('bg') || q.get('color') || 'red').toLowerCase();
 let bg = COLORS[bgKey] || (/^[0-9a-f]{6}$/i.test(bgKey) ? '#' + bgKey : bgKey);
 const look = (q.get('look') || q.get('style') || 'female').toLowerCase();
@@ -46,56 +46,151 @@ let lookX = 0, lookY = 0, targetX = 0, targetY = 0;
 let blinkAt = 0, nextBlink = performance.now() + 1800;
 let nextLook = 0;
 
-function drawLash(cx, cy, rx, ry, open, side) {
-  if (!isFemale || open < 0.25) return;
+function lighten(hex, amt) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.min(255, Math.round(r + (255 - r) * amt));
+  g = Math.min(255, Math.round(g + (255 - g) * amt));
+  b = Math.min(255, Math.round(b + (255 - b) * amt));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function drawBrowPink(cx, cy, rx, ry, side) {
+  // thin floating arched brow like Pink M&M
   ctx.save();
   ctx.strokeStyle = '#111';
   ctx.lineCap = 'round';
-  const n = 7;
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const ang = Math.PI + 0.18 + t * (Math.PI - 0.36);
-    const ex = cx + Math.cos(ang) * rx * 0.98;
-    const ey = cy + Math.sin(ang) * ry * open * 0.98;
-    const flare = (side < 0 ? -1 : 1) * (0.35 + t * 0.55);
-    const out = rx * (0.22 + 0.18 * Math.sin(t * Math.PI));
-    const lx = ex + Math.cos(ang - flare) * out;
-    const ly = ey + Math.sin(ang - flare) * out * 1.15;
-    ctx.lineWidth = Math.max(2, rx * (0.045 + 0.02 * (1 - Math.abs(t - 0.5) * 2)));
+  ctx.lineWidth = Math.max(2.5, rx * 0.07);
+  const y = cy - ry * 1.42;
+  const innerX = cx - side * rx * 0.85;
+  const peakX = cx + side * rx * 0.05;
+  const outerX = cx + side * rx * 1.05;
+  ctx.beginPath();
+  ctx.moveTo(innerX, y + ry * 0.12);
+  ctx.quadraticCurveTo(peakX, y - ry * 0.18, outerX, y + ry * 0.06);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawLashesPink(cx, cy, rx, ry, open, side) {
+  // exactly 3 thick outer-corner lashes, curling up/out
+  if (open < 0.2) return;
+  ctx.save();
+  ctx.strokeStyle = '#111';
+  ctx.lineCap = 'round';
+  // lid rim point near outer third of upper lid
+  const baseAng = side < 0 ? (Math.PI * 1.15) : (Math.PI * -0.15);
+  const lashes = [
+    { t: 0.00, len: 0.38, curl: 0.55 },
+    { t: 0.22, len: 0.48, curl: 0.75 },
+    { t: 0.42, len: 0.42, curl: 0.95 }
+  ];
+  for (const L of lashes) {
+    const ang = side < 0
+      ? Math.PI + 0.35 + L.t * 0.85
+      : -0.35 - L.t * 0.85;
+    // start on upper lid rim
+    const sx = cx + Math.cos(ang) * rx * 0.98;
+    const sy = cy + Math.sin(ang) * ry * open * 0.72; // sit on droopy lid line
+    const outDir = side < 0 ? -1 : 1;
+    const len = rx * L.len;
+    const ex = sx + outDir * len * 0.85;
+    const ey = sy - len * (0.55 + L.curl * 0.25);
+    const cpx = sx + outDir * len * 0.35;
+    const cpy = sy - len * (0.15 + L.curl * 0.35);
+    ctx.lineWidth = Math.max(3, rx * (0.09 - L.t * 0.015));
     ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.quadraticCurveTo(
-      ex + Math.cos(ang - flare * 0.5) * out * 0.55,
-      ey + Math.sin(ang - flare * 0.5) * out * 0.7 - rx * 0.06,
-      lx, ly - rx * 0.02
-    );
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cpx, cpy, ex, ey);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawBrow(cx, cy, rx, ry, side) {
+function drawEyeFemale(cx, cy, rx, ry, open, side) {
+  drawBrowPink(cx, cy, rx, ry, side);
+
+  const lidDrop = 0.38; // top ~third covered like Pink
+  const visibleOpen = open * (1 - lidDrop * 0.85);
+
+  // white sclera (full oval), then lid covers top
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, rx * 0.04);
+  ctx.strokeStyle = '#111';
+  ctx.stroke();
+  ctx.clip();
+
+  // pupil — solid black, slightly toward center / down like reference
+  const px = cx + (lookX * 0.55 + side * -0.12) * rx * 0.45;
+  const py = cy + (lookY * 0.45 + 0.18) * ry * 0.45;
+  const pr = rx * 0.36;
+  ctx.beginPath();
+  ctx.arc(px, py, pr, 0, Math.PI * 2);
+  ctx.fillStyle = '#111';
+  ctx.fill();
+  // tiny soft highlight
+  ctx.beginPath();
+  ctx.arc(px - pr * 0.28, py - pr * 0.32, pr * 0.18, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fill();
+  ctx.restore();
+
+  // heavy upper lid in candy color (covers top of eye)
+  if (open > 0.08) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
+    ctx.clip();
+    const lidColor = lighten(bg, 0.08);
+    ctx.fillStyle = lidColor;
+    ctx.beginPath();
+    // lid is a chord across the top of the eye
+    const lidY = cy - ry * open * (0.15 + lidDrop * 0.55);
+    ctx.moveTo(cx - rx, cy - ry * open);
+    ctx.lineTo(cx + rx, cy - ry * open);
+    ctx.lineTo(cx + rx, lidY);
+    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.55, cx - rx, lidY);
+    ctx.closePath();
+    ctx.fill();
+    // lid crease line
+    ctx.beginPath();
+    ctx.moveTo(cx - rx * 0.92, lidY + ry * open * 0.02);
+    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.42, cx + rx * 0.92, lidY + ry * open * 0.02);
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+    ctx.lineWidth = Math.max(1.5, rx * 0.035);
+    ctx.stroke();
+    // soft lash line on lid edge
+    ctx.beginPath();
+    ctx.moveTo(cx - rx * 0.95, lidY + ry * open * 0.05);
+    ctx.quadraticCurveTo(cx, lidY + ry * open * 0.48, cx + rx * 0.95, lidY + ry * open * 0.05);
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = Math.max(2, rx * 0.045);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawLashesPink(cx, cy, rx, ry, open, side);
+}
+
+function drawEyeMale(cx, cy, rx, ry, open, side) {
+  // plain M&M: no lashes, thicker brow
   ctx.save();
   ctx.strokeStyle = '#111';
   ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  const y = cy - ry * (isFemale ? 1.28 : 1.18);
-  const lift = isFemale ? ry * 0.22 : ry * 0.08;
-  const innerX = cx - side * rx * 0.95;
-  const outerX = cx + side * rx * 1.05;
-  const midX = cx + side * rx * 0.15;
-  ctx.lineWidth = Math.max(3, rx * (isFemale ? 0.11 : 0.14));
+  ctx.lineWidth = Math.max(3, rx * 0.14);
+  const y = cy - ry * 1.18;
   ctx.beginPath();
-  ctx.moveTo(innerX, y + (isFemale ? ry * 0.08 : 0));
-  ctx.quadraticCurveTo(midX, y - lift, outerX, y + ry * (isFemale ? 0.05 : 0.12));
+  ctx.moveTo(cx - side * rx * 0.95, y);
+  ctx.quadraticCurveTo(cx + side * rx * 0.1, y - ry * 0.08, cx + side * rx * 1.0, y + ry * 0.1);
   ctx.stroke();
   ctx.restore();
-}
 
-function drawEye(cx, cy, rx, ry, open, side) {
-  drawBrow(cx, cy, rx, ry, side);
-
-  // white + outline
   ctx.save();
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
@@ -105,73 +200,57 @@ function drawEye(cx, cy, rx, ry, open, side) {
   ctx.strokeStyle = '#111';
   ctx.stroke();
   ctx.clip();
-
-  // pupil
   const px = cx + lookX * rx * 0.38;
   const py = cy + lookY * ry * 0.38;
-  const pr = rx * (isFemale ? 0.40 : 0.42);
+  const pr = rx * 0.42;
   ctx.beginPath();
   ctx.arc(px, py, pr, 0, Math.PI * 2);
   ctx.fillStyle = '#111';
   ctx.fill();
-
-  // highlight
   ctx.beginPath();
-  ctx.arc(px - pr * 0.32, py - pr * 0.38, pr * 0.28, 0, Math.PI * 2);
+  ctx.arc(px - pr * 0.32, py - pr * 0.38, pr * 0.22, 0, Math.PI * 2);
   ctx.fillStyle = '#fff';
   ctx.fill();
-  if (isFemale) {
-    ctx.beginPath();
-    ctx.arc(px + pr * 0.28, py + pr * 0.22, pr * 0.10, 0, Math.PI * 2);
-    ctx.fill();
-  }
   ctx.restore();
-
-  // upper lid shadow for feminine lid crease
-  if (isFemale && open > 0.4) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry * open, 0, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.beginPath();
-    ctx.ellipse(cx, cy - ry * open * 0.55, rx * 0.95, ry * open * 0.35, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.08)';
-    ctx.fill();
-    ctx.restore();
-  }
-
-  drawLash(cx, cy, rx, ry, open, side);
 }
 
 function frame(t) {
   if (t > nextLook) {
-    targetX = Math.random() * 2 - 1;
-    targetY = Math.random() * 1.2 - 0.55;
-    if (Math.random() < 0.32) { targetX = 0; targetY = 0; }
-    nextLook = t + 800 + Math.random() * 2200;
+    targetX = Math.random() * 1.4 - 0.7;
+    targetY = Math.random() * 0.8 - 0.25;
+    if (Math.random() < 0.35) { targetX = 0; targetY = 0.15; }
+    nextLook = t + 900 + Math.random() * 2400;
   }
-  lookX += (targetX - lookX) * 0.12;
-  lookY += (targetY - lookY) * 0.12;
+  lookX += (targetX - lookX) * 0.1;
+  lookY += (targetY - lookY) * 0.1;
 
   if (t > nextBlink) {
     blinkAt = t;
-    nextBlink = t + 2200 + Math.random() * 3200;
+    nextBlink = t + 2400 + Math.random() * 3400;
   }
   let open = 1;
-  const b = (t - blinkAt) / 160;
-  if (b >= 0 && b < 2) open = Math.max(0.06, Math.abs(1 - b));
+  const b = (t - blinkAt) / 150;
+  if (b >= 0 && b < 2) open = Math.max(0.05, Math.abs(1 - b));
 
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // slightly larger, wider female eyes; leave room for lashes
-  const rx = Math.min(W * (isFemale ? 0.175 : 0.17), H * (isFemale ? 0.34 : 0.36));
-  const ry = rx * (isFemale ? 1.22 : 1.35);
-  const gap = rx * (isFemale ? 1.35 : 1.25);
-  const cy = H * 0.50;
-
-  drawEye(W / 2 - gap, cy, rx, ry, open, -1);
-  drawEye(W / 2 + gap, cy, rx, ry, open, 1);
+  if (isFemale) {
+    // Pink-style: large, slightly wide-set ovals
+    const rx = Math.min(W * 0.19, H * 0.32);
+    const ry = rx * 1.15;
+    const gap = rx * 1.28;
+    const cy = H * 0.52;
+    drawEyeFemale(W / 2 - gap, cy, rx, ry, open, -1);
+    drawEyeFemale(W / 2 + gap, cy, rx, ry, open, 1);
+  } else {
+    const rx = Math.min(W * 0.17, H * 0.36);
+    const ry = rx * 1.35;
+    const gap = rx * 1.25;
+    const cy = H * 0.50;
+    drawEyeMale(W / 2 - gap, cy, rx, ry, open, -1);
+    drawEyeMale(W / 2 + gap, cy, rx, ry, open, 1);
+  }
 
   requestAnimationFrame(frame);
 }
