@@ -84,7 +84,7 @@ function drawCandyLid(cx,cy,rx,ry,open,lidDrop){
   return edgeY;
 }
 
-/** Pink M&M: thick continuous upper lash line + 3 outer swirls */
+/** Pink M&M: bold continuous upper lash line + 2 subtle outer flicks */
 function drawPinkLashes(cx,cy,rx,ry,open,side,edgeY){
   if(open<0.15) return;
   ctx.save();
@@ -92,43 +92,34 @@ function drawPinkLashes(cx,cy,rx,ry,open,side,edgeY){
   ctx.lineCap='round';
   ctx.lineJoin='round';
 
-  // Thick friendly lash line across the whole lid edge
-  const y0 = edgeY + ry*open*0.06;
-  ctx.lineWidth = Math.max(4, rx*0.085);
+  // Bold continuous lash line across the full lid (matches Pink reference)
+  const y0 = edgeY + ry*open*0.05;
+  ctx.lineWidth = Math.max(5, rx*0.11);
   ctx.beginPath();
-  // follow the curved lid from inner to outer
-  const innerX = cx - side*rx*0.92;
-  const midX = cx;
-  const outerX = cx + side*rx*0.90;
+  const innerX = cx - side*rx*0.94;
+  const outerX = cx + side*rx*0.92;
   ctx.moveTo(innerX, y0 + ry*open*0.02);
-  ctx.quadraticCurveTo(midX, edgeY + ry*open*0.50, outerX, y0 + ry*open*0.08);
+  ctx.quadraticCurveTo(cx, edgeY + ry*open*0.52, outerX, y0 + ry*open*0.06);
   ctx.stroke();
 
-  // Three flirty swirls clustered at the OUTER end of that line
+  // Only 2 subtle outer flicks — not swirly; slight upward curl at the end
   const ox = outerX;
-  const oy = y0 + ry*open*0.08;
-  // each swirl: S-curve / spiral-ish flick up and out
-  const swirls = [
-    { spread: 0.08, lift: 0.38, out: 0.32, w: 0.075 },
-    { spread: 0.22, lift: 0.52, out: 0.42, w: 0.09 },
-    { spread: 0.36, lift: 0.44, out: 0.36, w: 0.075 }
+  const oy = y0 + ry*open*0.06;
+  const flicks = [
+    { out: 0.28, lift: 0.34, w: 0.085 },
+    { out: 0.38, lift: 0.46, w: 0.095 }
   ];
-  for (const S of swirls) {
-    const sx = ox - side*rx*0.02;
+  for (const F of flicks) {
+    const sx = ox - side*rx*0.01;
     const sy = oy;
-    const ex = ox + side*rx*S.out;
-    const ey = oy - ry*S.lift;
-    // control points make a swirl (curl back slightly at tip)
-    const c1x = ox + side*rx*(S.out*0.25);
-    const c1y = oy - ry*(S.lift*0.15 + S.spread*0.2);
-    const c2x = ox + side*rx*(S.out*0.85);
-    const c2y = oy - ry*(S.lift*1.05);
-    const tipx = ex + side*rx*0.06;
-    const tipy = ey + ry*0.08; // tiny hook at end
-    ctx.lineWidth = Math.max(3.5, rx*S.w);
+    const ex = ox + side*rx*F.out;
+    const ey = oy - ry*F.lift;
+    const cpx = ox + side*rx*(F.out*0.4);
+    const cpy = oy - ry*(F.lift*0.55);
+    ctx.lineWidth = Math.max(3.5, rx*F.w);
     ctx.beginPath();
     ctx.moveTo(sx, sy);
-    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, tipx, tipy);
+    ctx.quadraticCurveTo(cpx, cpy, ex, ey);
     ctx.stroke();
   }
   ctx.restore();
@@ -139,11 +130,11 @@ function drawEyeFemale(cx,cy,rx,ry,open,side){
   ctx.save();
   ctx.strokeStyle='#111';
   ctx.lineCap='round';
-  ctx.lineWidth=Math.max(2.2,rx*0.065);
-  const by=cy-ry*1.38;
+  ctx.lineWidth=Math.max(2.4,rx*0.07);
+  const by=cy-ry*1.40;
   ctx.beginPath();
-  ctx.moveTo(cx-side*rx*0.88,by+ry*0.14);
-  ctx.quadraticCurveTo(cx+side*rx*0.05,by-ry*0.2,cx+side*rx*1.02,by+ry*0.02);
+  ctx.moveTo(cx-side*rx*0.86,by+ry*0.12);
+  ctx.quadraticCurveTo(cx+side*rx*0.08,by-ry*0.22,cx+side*rx*1.0,by+ry*0.04);
   ctx.stroke();
   ctx.restore();
 
@@ -163,8 +154,10 @@ function drawEyeFemale(cx,cy,rx,ry,open,side){
   const py=cy+(lookY*0.4+0.12)*ry*0.42;
   const pr=rx*0.34;
   ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
-  ctx.beginPath();ctx.arc(px-pr*0.3,py-pr*0.35,pr*0.2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
-  ctx.beginPath();ctx.arc(px+pr*0.25,py+pr*0.2,pr*0.08,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fill();
+  // Strong gleaming highlights (friendly Pink look)
+  ctx.beginPath();ctx.arc(px-pr*0.32,py-pr*0.38,pr*0.28,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+  ctx.beginPath();ctx.arc(px+pr*0.28,py+pr*0.18,pr*0.12,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.9)';ctx.fill();
+  ctx.beginPath();ctx.arc(px-pr*0.05,py-pr*0.05,pr*0.06,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.45)';ctx.fill();
   ctx.restore();
 
   // bedroom lid ~top third (Pink)
