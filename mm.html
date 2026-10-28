@@ -84,35 +84,51 @@ function drawCandyLid(cx,cy,rx,ry,open,lidDrop){
   return edgeY;
 }
 
-/** Pink M&M: exactly 3 thick lashes from OUTER corner only, curling up and out */
+/** Pink M&M: thick continuous upper lash line + 3 outer swirls */
 function drawPinkLashes(cx,cy,rx,ry,open,side,edgeY){
-  if(open<0.18) return;
+  if(open<0.15) return;
   ctx.save();
   ctx.strokeStyle='#0a0a0a';
   ctx.lineCap='round';
-  // outer corner of the lid edge
-  const ox=cx+side*rx*0.88;
-  const oy=edgeY+ry*open*0.28;
-  // 3 lashes: short, medium, longest — all from outer corner cluster
-  const lashes=[
-    {ang:-0.95,len:0.42,w:0.10},
-    {ang:-1.20,len:0.55,w:0.12},
-    {ang:-1.42,len:0.48,w:0.10}
+  ctx.lineJoin='round';
+
+  // Thick friendly lash line across the whole lid edge
+  const y0 = edgeY + ry*open*0.06;
+  ctx.lineWidth = Math.max(4, rx*0.085);
+  ctx.beginPath();
+  // follow the curved lid from inner to outer
+  const innerX = cx - side*rx*0.92;
+  const midX = cx;
+  const outerX = cx + side*rx*0.90;
+  ctx.moveTo(innerX, y0 + ry*open*0.02);
+  ctx.quadraticCurveTo(midX, edgeY + ry*open*0.50, outerX, y0 + ry*open*0.08);
+  ctx.stroke();
+
+  // Three flirty swirls clustered at the OUTER end of that line
+  const ox = outerX;
+  const oy = y0 + ry*open*0.08;
+  // each swirl: S-curve / spiral-ish flick up and out
+  const swirls = [
+    { spread: 0.08, lift: 0.38, out: 0.32, w: 0.075 },
+    { spread: 0.22, lift: 0.52, out: 0.42, w: 0.09 },
+    { spread: 0.36, lift: 0.44, out: 0.36, w: 0.075 }
   ];
-  for(const L of lashes){
-    const ang=side<0?Math.PI+(-L.ang):L.ang; // mirror
-    // Pink lashes curve UP and OUT from outer corner
-    const len=rx*L.len;
-    const sx=ox+side*rx*0.02;
-    const sy=oy;
-    const ex=sx+side*Math.cos(Math.abs(L.ang))*len;
-    const ey=sy-Math.sin(Math.abs(L.ang))*len*1.05;
-    const cpx=sx+side*len*0.35;
-    const cpy=sy-len*0.75;
-    ctx.lineWidth=Math.max(3.5,rx*L.w);
+  for (const S of swirls) {
+    const sx = ox - side*rx*0.02;
+    const sy = oy;
+    const ex = ox + side*rx*S.out;
+    const ey = oy - ry*S.lift;
+    // control points make a swirl (curl back slightly at tip)
+    const c1x = ox + side*rx*(S.out*0.25);
+    const c1y = oy - ry*(S.lift*0.15 + S.spread*0.2);
+    const c2x = ox + side*rx*(S.out*0.85);
+    const c2y = oy - ry*(S.lift*1.05);
+    const tipx = ex + side*rx*0.06;
+    const tipy = ey + ry*0.08; // tiny hook at end
+    ctx.lineWidth = Math.max(3.5, rx*S.w);
     ctx.beginPath();
-    ctx.moveTo(sx,sy);
-    ctx.quadraticCurveTo(cpx,cpy,ex,ey);
+    ctx.moveTo(sx, sy);
+    ctx.bezierCurveTo(c1x, c1y, c2x, c2y, tipx, tipy);
     ctx.stroke();
   }
   ctx.restore();
@@ -153,16 +169,7 @@ function drawEyeFemale(cx,cy,rx,ry,open,side){
 
   // bedroom lid ~top third (Pink)
   const edgeY=drawCandyLid(cx,cy,rx,ry,open,0.36);
-  // lash line on lid
   if(open>0.1&&edgeY!=null){
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx-rx*0.9,edgeY+ry*open*0.06);
-    ctx.quadraticCurveTo(cx,edgeY+ry*open*0.48,cx+rx*0.9,edgeY+ry*open*0.06);
-    ctx.strokeStyle='#111';
-    ctx.lineWidth=Math.max(2.2,rx*0.05);
-    ctx.stroke();
-    ctx.restore();
     drawPinkLashes(cx,cy,rx,ry,open,side,edgeY);
   }
 }
